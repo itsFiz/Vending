@@ -1,36 +1,46 @@
 package com.example.Vending.services;
 import com.example.Vending.models.Product;
 import com.example.Vending.models.Slot;
-import com.example.Vending.models.VendingMachine;
 import com.example.Vending.models.ProductRepo;
 import com.example.Vending.models.SlotRepo;
-import com.example.Vending.models.VendingMachineRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Optional;
-
+// OwnerService.java
 @Service
 public class OwnerService {
 
-    private final VendingMachineRepo vendingMachineRepo;
     private final ProductRepo productRepo;
     private final SlotRepo slotRepo;
 
     @Autowired
-    public OwnerService(VendingMachineRepo vendingMachineRepo, ProductRepo productRepo, SlotRepo slotRepo) {
-        this.vendingMachineRepo = vendingMachineRepo;
+    public OwnerService(ProductRepo productRepo, SlotRepo slotRepo) {
+
         this.productRepo = productRepo;
         this.slotRepo = slotRepo;
     }
 
-    public VendingMachine getVendingMachineStatus() {
-        return vendingMachineRepo.findById(1L).orElse(null);
+    @PostConstruct
+    public void initializeSlots() {
+        System.out.println("Initializing slots");
+
+        // Initialize 10 small slots
+        for (int i = 1; i <= 10; i++) {
+            slotRepo.save(new Slot("s" + i, null));
+        }
+
+        // Initialize 10 medium slots
+        for (int i = 1; i <= 10; i++) {
+            slotRepo.save(new Slot("m" + i, null));
+        }
     }
 
-    public void loadProduct(String productName, String productType) {
-        System.out.println("Trying to load product: " + productName);
+    public String loadProduct(String productName, String productType) {
         // Create a new product
         Product newProduct = new Product();
         newProduct.setName(productName);
@@ -45,44 +55,44 @@ public class OwnerService {
         if (availableSlot.isPresent()) {
             // Assign the product to the available slot
             Slot slot = availableSlot.get();
-            System.out.println("Product will be loaded into slot: " + slot.getId());
             slot.setProduct(newProduct);
-            slot.setAvailable(false);
 
             // Save the updated slot to the database
             slotRepo.save(slot);
 
-            System.out.println("Product loaded successfully into slot: " + slot.getId());
+            return "Product " + slot.getProduct().getId()    +
+                    " - " + productName + " " + productType + " loaded successfully into " + slot.getItemCode();
         } else {
-            System.out.println("No available slots for the product type: " + productType);
+            return "No available slots for the product type: " + productType;
         }
     }
-
     private Optional<Slot> findAvailableSlot(String productType) {
-        List<Slot> slots = slotRepo.findByAvailableTrue();
-        System.out.println("Available Slots: " + slots.size());
+        List<Slot> slots;
+        Optional<Slot> availableSlot;
 
-        for (Slot slot : slots) {
-            System.out.println("Slot ID: " + slot.getId() + ", Item Code: " + slot.getItemCode() + ", Available: " + slot.isAvailable());
-            if (slot.getItemCode() != null) {
-                System.out.println("Item Code starts with 'cookie': " + slot.getItemCode().startsWith("cookie"));
-                System.out.println("Item Code starts with 'chip': " + slot.getItemCode().startsWith("chip"));
+        if (productType.equals("chip")) {
+            // If the product is a chip, look for available medium slots
+            slots = slotRepo.findAllByItemCodeStartingWith("m");
+        } else {
+            // If the product is not a chip (e.g., "cookie"), look for available small slots first
+            slots = slotRepo.findAllByItemCodeStartingWith("s");
+
+            // If no available small slot, try to find an available medium slot
+            if (slots.isEmpty()) {
+                slots = slotRepo.findAllByItemCodeStartingWith("m");
             }
         }
 
-        return slots.stream()
-                .filter(slot -> slot.getItemCode() != null && slot.getItemCode().startsWith(productType))
-                .findFirst();
-    }
-    private boolean isSlotTypeAvailable(String itemCode) {
-        int slotNumber = Integer.parseInt(itemCode.substring(1)); // Extract the numeric part of the item code
-
-        if (itemCode.startsWith("s") && slotNumber >= 1 && slotNumber <= 10) {
-            return true; // Small slot
-        } else if (itemCode.startsWith("m") && slotNumber >= 1 && slotNumber <= 10) {
-            return true; // Medium slot
+        System.out.println("Slots for " + productType + ":");
+        for (Slot slot : slots) {
+            System.out.println("Slot ID: " + slot.getId() + ", Item Code: " + slot.getItemCode() + ", Product ID: " + (slot.getProduct() != null ? slot.getProduct().getId() : "null"));
         }
 
-        return false; // Invalid slot type or number
+        availableSlot = slots.stream()
+                .filter(slot -> slot.getProduct() == null)
+                .findFirst();
+
+        return availableSlot;
     }
+
 }

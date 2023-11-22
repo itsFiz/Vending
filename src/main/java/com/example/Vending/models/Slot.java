@@ -3,42 +3,37 @@ package com.example.Vending.models;
 // Slot.java
 
 import javax.persistence.*;
-
 @Entity
 public class Slot {
     @Id
-    private String id; // e.g., s1, s2, m1, m2
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id; // e.g., 1, 2, 3
 
     private String itemCode; // e.g., s1, s2, m1, m2
-    private boolean available;
 
     @OneToOne
     private Product product;
 
-    @ManyToOne
-    @JoinColumn(name="vending_machine_id")
-    private VendingMachine vendingMachine;
+    @Column(name = "product_name")
+    private String productName;
+
 
     // Constructors, getters, and setters...
 
 
-    public Slot(String id, String itemCode, boolean available) {
-        this.id = id;
-        this.itemCode = itemCode;
-        this.available = available;
-
+    public Slot() {
     }
 
-    public void setProduct(Product product) {
+    public Slot(String itemCode, Product product) {
+        this.itemCode = itemCode;
         this.product = product;
     }
 
-
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -50,25 +45,12 @@ public class Slot {
         this.itemCode = itemCode;
     }
 
-    public boolean isAvailable() {
-        return available;
-    }
-
-    public void setAvailable(boolean available) {
-        this.available = available;
-    }
-
     public Product getProduct() {
         return product;
     }
 
-
-
-    public VendingMachine getVendingMachine() {
-        return vendingMachine;
+    public void setProduct(Product product) {
+        this.product = product;
     }
-
-    public void setVendingMachine(VendingMachine vendingMachine) {
-        this.vendingMachine = vendingMachine;
-    }
+// Getters and setters...
 }
