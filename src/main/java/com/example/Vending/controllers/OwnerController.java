@@ -1,10 +1,7 @@
 package com.example.Vending.controllers;
 
-// VendingMachineController.java
 
-import com.example.Vending.models.Product;
 import com.example.Vending.services.OwnerService;
-import com.example.Vending.services.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,23 +11,21 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api")
-public class VendingMachineController {
+@RequestMapping("/owner")
+public class OwnerController {
 
     private final OwnerService ownerService;
-    private final CustomerService customerService;
 
     @Autowired
-    public VendingMachineController(OwnerService ownerService, CustomerService customerService) {
+    public OwnerController(OwnerService ownerService) {
         this.ownerService = ownerService;
-        this.customerService = customerService;
+
     }
 
     // Owner endpoints
 
 
-
-    @PostMapping("/owner/load-product")
+    @PostMapping("/load-product")
     public ResponseEntity<String> loadProduct(@RequestBody Map<String, String> request) {
         String productName = request.get("productName");
         String productType = request.get("productType");
@@ -45,16 +40,6 @@ public class VendingMachineController {
     }
 
 
-
-    // Customer endpoints
-
-//    @GetMapping("/customer/available-products")
-//    public List<Product> listAvailableProducts() {
-//        return customerService.listAvailableProducts();
-//    }
-
-//    @PostMapping("/customer/purchase")
-//    public void purchaseProduct(@RequestParam String slotId) {
-//        customerService.purchaseProduct(slotId);
-//    }
 }
+
+

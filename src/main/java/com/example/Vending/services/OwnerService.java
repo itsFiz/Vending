@@ -1,11 +1,9 @@
 package com.example.Vending.services;
 import com.example.Vending.models.Product;
 import com.example.Vending.models.Slot;
-import com.example.Vending.models.ProductRepo;
-import com.example.Vending.models.SlotRepo;
+import com.example.Vending.repositories.ProductRepo;
+import com.example.Vending.repositories.SlotRepo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -31,12 +29,12 @@ public class OwnerService {
 
         // Initialize 10 small slots
         for (int i = 1; i <= 10; i++) {
-            slotRepo.save(new Slot("s" + i, null));
+            slotRepo.save(new Slot("s" + i, null, null, null));
         }
 
         // Initialize 10 medium slots
         for (int i = 1; i <= 10; i++) {
-            slotRepo.save(new Slot("m" + i, null));
+            slotRepo.save(new Slot("m" + i, null, null, null));
         }
     }
 
@@ -56,43 +54,73 @@ public class OwnerService {
             // Assign the product to the available slot
             Slot slot = availableSlot.get();
             slot.setProduct(newProduct);
+            slot.setProductName(productName);
+            slot.setProductType(productType);
 
             // Save the updated slot to the database
             slotRepo.save(slot);
 
-            return "Product " + slot.getProduct().getId()    +
+            return "Product " + slot.getProduct().getId() +
                     " - " + productName + " " + productType + " loaded successfully into " + slot.getItemCode();
         } else {
             return "No available slots for the product type: " + productType;
         }
     }
+
     private Optional<Slot> findAvailableSlot(String productType) {
-        List<Slot> slots;
-        Optional<Slot> availableSlot;
-
-        if (productType.equals("chip")) {
-            // If the product is a chip, look for available medium slots
-            slots = slotRepo.findAllByItemCodeStartingWith("m");
-        } else {
-            // If the product is not a chip (e.g., "cookie"), look for available small slots first
-            slots = slotRepo.findAllByItemCodeStartingWith("s");
-
-            // If no available small slot, try to find an available medium slot
-            if (slots.isEmpty()) {
-                slots = slotRepo.findAllByItemCodeStartingWith("m");
-            }
+        // Check if the productType is valid (chip or cookie)
+        if (!productType.equals("chip") && !productType.equals("cookie")) {
+            System.out.println("Invalid productType");
+            return Optional.empty();
         }
 
-        System.out.println("Slots for " + productType + ":");
-        for (Slot slot : slots) {
-            System.out.println("Slot ID: " + slot.getId() + ", Item Code: " + slot.getItemCode() + ", Product ID: " + (slot.getProduct() != null ? slot.getProduct().getId() : "null"));
-        }
+        List<Slot> slots = slotRepo.findAll();
 
-        availableSlot = slots.stream()
-                .filter(slot -> slot.getProduct() == null)
+        // Find the first available slot matching the productType
+        Optional<Slot> availableSlot = slots.stream()
+                .filter(slot -> {
+                    String itemCode = slot.getItemCode();
+                    boolean isMatched = itemCode != null &&
+                            ((productType.equals("cookie") && itemCode.startsWith("s")) ||
+                                    (productType.equals("chip") && itemCode.startsWith("m"))) &&
+                            slot.getProduct() == null &&
+                            slot.getProductName() == null &&
+                            slot.getProductType() == null;  // Check if the slot is not occupied
+
+                    if (isMatched) {
+                        System.out.println("Found available slot: " + slot.getId() + ", Item Code: " + itemCode);
+                    } else {
+                        System.out.println("Slot not available: " + slot.getId() + ", Item Code: " + itemCode);
+                    }
+
+                    return isMatched;
+                })
                 .findFirst();
 
-        return availableSlot;
-    }
+        if (availableSlot.isPresent()) {
+            return availableSlot;
+        }
 
+        // If no available slot is found, try to find a slot in the other category (m for cookie, s for chip)
+        Optional<Slot> alternateSlot = slots.stream()
+                .filter(slot -> {
+                    String itemCode = slot.getItemCode();
+                    boolean isMatched = itemCode != null &&
+                            ((productType.equals("cookie") && itemCode.startsWith("m")) ) &&
+                            slot.getProduct() == null &&
+                            slot.getProductName() == null &&
+                            slot.getProductType() == null;  // Check if the slot is not occupied
+
+                    if (isMatched) {
+                        System.out.println("Found alternate slot: " + slot.getId() + ", Item Code: " + itemCode);
+                    } else {
+                        System.out.println("Alternate slot not available: " + slot.getId() + ", Item Code: " + itemCode);
+                    }
+
+                    return isMatched;
+                })
+                .findFirst();
+
+        return alternateSlot;
+    }
 }
