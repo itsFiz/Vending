@@ -19,8 +19,13 @@ public class Slot {
 
     @Column(name = "product_type")
     private String productType;
+    
 
+    @Column
+    private Double price;
 
+    @Column(name = "image_url")
+    private String imageUrl;
     // Constructors, getters, and setters...
 
 
